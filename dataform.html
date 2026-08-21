@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dataform - Pipeline Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+:root{--primary-color:#0072C6;--secondary-color:#005A9E;--bg-color:#f4f7f9;--card-bg:#fff;--text-color:#333;--text-muted:#666;--border-color:#e1e4e8;--success-color:#28a745;--failure-color:#dc3545;--pending-color:#ffc107}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg-color);color:var(--text-color);margin:0;padding:0;line-height:1.6}
+.container{max-width:1200px;margin:0 auto;padding:1rem 2rem 2rem}
+.navbar{display:flex;justify-content:center;gap:1.5rem;margin-bottom:2rem;padding:.75rem;background:rgba(255,255,255,.7);backdrop-filter:blur(10px);border:1px solid var(--border-color);border-radius:999px;position:sticky;top:1rem;z-index:100}
+.nav-link{text-decoration:none;color:var(--text-muted);font-size:.95rem;font-weight:500;padding:.5rem 1.25rem;border-radius:999px;transition:all .2s}
+.nav-link:hover{color:var(--primary-color);background:rgba(0,114,198,.05)}
+.nav-link.active{color:#fff;background:var(--primary-color);box-shadow:0 4px 10px rgba(0,114,198,.2)}
+header{margin-bottom:2rem;text-align:center}
+.logo{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-bottom:.5rem}
+.logo h1{font-size:1.8rem;font-weight:700;color:var(--primary-color);margin:0}
+.subtitle{color:var(--text-muted);font-size:1.1rem;margin-top:0}
+main{display:block;min-width:900px;margin:0 auto;gap:2rem}
+.card{background:var(--card-bg);border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.05),0 1px 3px rgba(0,0,0,.1);padding:1.5rem}
+.results-card+.results-card{margin-top:2rem}
+h2{font-size:1.25rem;margin-bottom:1.5rem;color:var(--text-color);border-bottom:2px solid var(--border-color);padding-bottom:.5rem}
+.results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+.hide{display:none!important}
+.status{font-size:.85rem;padding:.5rem 1rem;border-radius:6px;margin-bottom:1rem;font-weight:500}
+.status.info{background:#e2eaf1;color:var(--primary-color)}
+.status.error{background:#f8312f1a;color:#d32f2f}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:1rem;background:#f8f9fa;font-weight:600;color:var(--text-muted);border-bottom:2px solid var(--border-color)}
+td{padding:1rem;border-bottom:1px solid var(--border-color);font-size:.95rem}
+.empty-state{text-align:center;padding:3rem;color:var(--text-muted);font-style:italic}
+.table-container{overflow-x:auto}
+.status-badge{padding:.25rem .75rem;border-radius:999px;font-size:.8rem;font-weight:600;text-transform:uppercase}
+.status-success{background:#d4edda;color:#155724}
+.status-failure{background:#f8d7da;color:#721c24}
+.status-pending{background:#fff3cd;color:#856404}
+.status-info{background:#e7f5ff;color:#1971c2}
+.status-muted{background:#f1f3f5;color:#868e96}
+button{width:100%;padding:.875rem;background-color:var(--primary-color);color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;transition:background-color .2s,transform .1s}
+button:hover{background-color:var(--secondary-color)}
+button:active{transform:scale(.98)}
+.action-btn{width:auto;padding:.4rem 1rem;font-size:.85rem}
+.action-btn.secondary{background:#e9ecef;color:var(--text-color)}
+.action-btn.secondary:hover{background:#dee2e6}
+footer{margin-top:3rem;text-align:center;color:var(--text-muted);font-size:.875rem}
+
+.results-header .action-btn{width:auto;padding:.4rem 1rem;font-size:.85rem}
+.schema-text{font-size:.9rem;color:var(--text-color);font-weight:500}
+.workflow-link{color:var(--primary-color);text-decoration:none;font-weight:500}
+.workflow-link:hover{text-decoration:underline}
+.releases-panel{display:flex;flex-direction:row;flex-wrap:wrap;gap:1rem}
+.releases-loading{padding:1rem;color:var(--text-muted);text-align:center;width:100%}
+.release-card{flex:1 1 200px;min-width:180px;padding:1.25rem 1.5rem;background:#f8f9fa;border:1px solid var(--border-color);border-radius:8px;transition:background .2s;display:flex;flex-direction:column;gap:.5rem;cursor:pointer}
+.release-card:hover{background:#e9ecef}
+.release-card:hover .release-last-compile{color:var(--primary-color)}
+.release-name{font-weight:600;color:var(--text-color);font-size:1rem}
+.release-name a{color:var(--text-color);text-decoration:none}
+.release-name a:hover{color:var(--primary-color)}
+.release-last-compile{font-size:.85rem;color:var(--text-muted);transition:color .2s}
+.release-vars{display:none;margin-top:.5rem;padding:.5rem .75rem;background:#fff;border-radius:4px;border:1px solid var(--border-color);font-size:.8rem}
+.release-vars.show{display:block}
+.release-var-item{display:flex;justify-content:space-between;padding:.2rem 0;border-bottom:1px dashed #e9ecef}
+.release-var-item:last-child{border-bottom:none}
+.release-var-key{color:var(--text-muted)}
+.release-var-value{font-weight:500;color:var(--primary-color)}
+.release-restore-btn{display:none;margin-top:.75rem;padding:.5rem 1rem;background:var(--primary-color);color:#fff;border:none;border-radius:4px;font-size:.85rem;cursor:pointer;width:100%}
+.release-restore-btn:hover{background:var(--secondary-color)}
+.release-vars.show+.release-restore-btn,.release-vars.show~.release-restore-btn{display:block}
+.config-tabs{display:flex;gap:0}
+.config-tab{padding:.5rem 1.25rem;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:.95rem;font-weight:500;color:var(--text-muted);transition:all .2s;width:auto;font-family:inherit}
+.config-tab:hover{color:var(--primary-color);background:none}
+.config-tab.active{color:var(--primary-color);border-bottom-color:var(--primary-color)}
+.config-tab-panel{display:none}
+.config-tab-panel.active{display:block}
+.wf-search-bar{position:relative;margin-bottom:1rem;max-width:400px}
+.wf-search-bar .file-search{width:100%;padding:.5rem .75rem;border:1px solid var(--border-color);border-radius:6px;font-family:inherit;font-size:.9rem;box-sizing:border-box}
+.wf-search-bar .file-search:focus{outline:none;border-color:var(--primary-color);box-shadow:0 0 0 3px rgba(0,114,198,.1)}
+.search-clear{position:absolute;right:.5rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.2rem;color:var(--text-muted);line-height:1;padding:.2rem}
+.search-clear:hover{color:var(--text-color)}
+.search-results-count{font-size:.85rem;color:var(--text-muted);margin-bottom:.75rem}
+.search-results-list{display:flex;flex-direction:column;gap:.5rem}
+.search-result-item{padding:.75rem 1rem;background:#f8f9fa;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;transition:background .2s,box-shadow .2s}
+.search-result-item:hover{background:#e9ecef;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.search-result-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
+.search-result-name{font-weight:600;font-size:.95rem;color:var(--primary-color)}
+.search-result-count{font-size:.75rem;color:var(--text-muted);background:#f1f3f5;padding:.15rem .5rem;border-radius:4px;font-weight:600}
+.search-result-targets{display:flex;flex-wrap:wrap;gap:.3rem}
+.search-no-results{text-align:center;padding:2rem;color:var(--text-muted);font-size:.9rem}
+.target-badge{display:inline-block;padding:.15rem .5rem;background:#e7f5ff;color:#1971c2;border-radius:4px;font-size:.75rem;font-weight:500;font-family:'Courier New',Courier,monospace}
+.wf-config-card{flex:1 1 220px;min-width:200px;padding:1.25rem 1.5rem;background:#f8f9fa;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;transition:background .2s,box-shadow .2s;display:flex;flex-direction:column;gap:.4rem}
+.wf-config-card:hover{background:#e9ecef;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.wf-config-name{font-weight:600;font-size:1rem;color:var(--text-color)}
+.wf-config-meta{display:flex;align-items:center;gap:.5rem;font-size:.85rem}
+.wf-config-state{padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600;text-transform:uppercase}
+.state-active{background:#d4edda;color:#155724}
+.state-disabled{background:#f1f3f5;color:#868e96}
+.wf-config-schedule{font-size:.8rem;color:var(--text-muted);font-family:'Courier New',Courier,monospace}
+.wf-config-targets{font-size:.8rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal.hide{display:none}
+.modal-content{background:#fff;border-radius:8px;width:90%;max-width:600px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column}
+.modal-wide{max-width:900px;width:95%}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-bottom:1px solid var(--border-color)}
+.modal-header h3{margin:0;font-size:1.1rem}
+.modal-close{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);padding:0;line-height:1}
+.modal-close:hover{color:var(--text-color)}
+.modal-body{padding:1.5rem;overflow-y:auto}
+.compilation-history{display:flex;flex-direction:column;gap:.75rem}
+.compilation-item{display:flex;justify-content:space-between;align-items:center;padding:.75rem;border:1px solid var(--border-color);border-radius:6px}
+.compilation-item:hover{background:#f8f9fa}
+.compilation-info{flex:1}
+.compilation-time{font-weight:500;font-size:.9rem}
+.compilation-vars{font-size:.8rem;color:var(--text-muted);margin-top:.25rem}
+.compilation-restore-btn{padding:.4rem .8rem;background:var(--success-color);color:#fff;border:none;border-radius:4px;font-size:.8rem;cursor:pointer;margin-left:1rem}
+.compilation-restore-btn:hover{background:#218838}
+.compilation-restore-btn:disabled{background:#ccc;cursor:not-allowed}
+.scripts-header{margin-bottom:1rem}
+.scripts-title{font-size:1.2rem;font-weight:700;color:var(--primary-color);margin-bottom:.5rem}
+.scripts-meta{display:flex;gap:1.5rem;font-size:.85rem;color:var(--text-muted);margin-bottom:.25rem}
+.scripts-meta code{font-size:.8rem;background:#f1f3f5;padding:.1rem .3rem;border-radius:3px}
+.scripts-notice{font-size:.8rem;color:#856404;background:#fff3cd;padding:.3rem .6rem;border-radius:4px;display:inline-block;margin-top:.25rem}
+.scripts-targets{font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;display:flex;flex-wrap:wrap;align-items:center;gap:.35rem}
+.scripts-list{display:flex;flex-direction:column;gap:.75rem}
+.script-item{border:1px solid var(--border-color);border-radius:8px;overflow:hidden}
+.script-item-header{display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;background:#f8f9fa;border-bottom:1px solid var(--border-color);flex-wrap:wrap}
+.script-target{font-family:'Courier New',Courier,monospace;font-size:.8rem;font-weight:600;color:var(--primary-color)}
+.script-filepath{font-size:.75rem;color:var(--text-muted);font-family:'Courier New',Courier,monospace;margin-left:auto}
+.script-sql{background:#212529;color:#f8f9fa;padding:1rem;margin:0;overflow-x:auto;max-height:300px;overflow-y:auto;font-family:'Courier New',Courier,monospace;font-size:.82rem;line-height:1.5;white-space:pre;word-wrap:normal}
+.script-sql code{background:transparent;color:#ced4da;padding:0}
+.script-no-sql{padding:1rem;text-align:center;color:var(--text-muted);font-style:italic;font-size:.85rem}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 4V28M4 16H28" stroke="#0072C6" stroke-width="3" stroke-linecap="round" />
+        </svg>
+        <h1>Dataform Workflow History</h1>
+      </div>
+      <p class="subtitle">Google Cloud Dataform Management</p>
+    </header>
+
+    <main>
+      <section class="card results-card">
+        <div class="results-header">
+          <div class="config-tabs">
+            <button class="config-tab active" data-tab="releases">Release Configurations</button>
+            <button class="config-tab" data-tab="workflows">Workflow Configurations</button>
+          </div>
+          <button id="recompile-all-btn" class="action-btn">Recompile All</button>
+        </div>
+        <div class="config-tab-panel active" id="tab-releases">
+          <div id="releases-panel" class="releases-panel"></div>
+        </div>
+        <div class="config-tab-panel" id="tab-workflows">
+          <div class="wf-search-bar">
+            <input type="text" id="script-search" placeholder="Search scripts by target name..." class="file-search">
+            <span id="search-clear" class="search-clear hide">&times;</span>
+          </div>
+          <div id="workflow-configs-panel" class="releases-panel">
+            <div class="releases-loading">Loading workflow configurations...</div>
+          </div>
+          <div id="search-results" class="hide"></div>
+        </div>
+      </section>
+
+      <section class="card results-card">
+        <div class="results-header">
+          <h2>Workflow Invocations</h2>
+          <div id="status-indicator" class="status hide">Loading...</div>
+        </div>
+        <div class="table-container">
+          <table id="invocations-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Schema</th>
+                <th>Workflow</th>
+                <th>Tables</th>
+                <th>Started At</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody id="invocations-body">
+              <tr><td colspan="6" class="empty-state">Loading data from Google Cloud Dataform...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Pipeline Manager | Google Apps Script</p>
+    </footer>
+  </div>
+
+  <div id="restore-modal" class="modal hide">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Restore Release Variables</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="restore-release-name"></p>
+        <div id="compilation-history" class="compilation-history"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="scripts-modal" class="modal hide">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <h3>Workflow Scripts</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="scripts-modal-body"></div>
+    </div>
+  </div>
+
+
+  <script>
+function apiCall(action, params) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .runAction(action, params || {});
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  var k = 1024;
+  var sizes = ['B', 'KB', 'MB', 'GB'];
+  var i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var invocationsBody = document.getElementById('invocations-body');
+  var loader = document.getElementById('status-indicator');
+  var releasesPanel = document.getElementById('releases-panel');
+  var workflowConfigsData = [];
+
+  fetchReleaseConfigs();
+  fetchWorkflowConfigs();
+  fetchDataformHistory();
+
+  document.getElementById('recompile-all-btn').addEventListener('click', recompileAll);
+
+  document.querySelectorAll('.config-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.config-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.config-tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  var searchInput = document.getElementById('script-search');
+  var searchClear = document.getElementById('search-clear');
+  searchInput.addEventListener('input', function() {
+    var query = searchInput.value.trim();
+    if (query.length === 0) { searchClear.classList.add('hide'); handleScriptSearch(''); }
+    else { searchClear.classList.remove('hide'); handleScriptSearch(query.toLowerCase()); }
+  });
+  searchClear.addEventListener('click', function() {
+    searchInput.value = ''; searchClear.classList.add('hide'); handleScriptSearch(''); searchInput.focus();
+  });
+
+  function recompileAll() {
+    if (!confirm('Recompile all release configurations? This will take a few minutes.')) return;
+    var btn = document.getElementById('recompile-all-btn');
+    btn.disabled = true; btn.textContent = 'Recompiling...';
+    apiCall('recompile').then(function(data) {
+      var results = data.results || [];
+      var errors = results.filter(function(r) { return r.status !== 'ok'; });
+      btn.textContent = errors.length === 0 ? 'Recompiled!' : 'Completed with errors';
+      if (errors.length > 0) alert('Errors in: ' + errors.map(function(e) { return e.release; }).join(', '));
+      setTimeout(function() { btn.textContent = 'Recompile All'; btn.disabled = false; }, 3000);
+      fetchReleaseConfigs();
+    }).catch(function(err) {
+      alert('Error: ' + err.message); btn.disabled = false; btn.textContent = 'Recompile All';
+    });
+  }
+
+  function fetchReleaseConfigs() {
+    releasesPanel.innerHTML = '';
+    apiCall('listReleases').then(function(data) {
+      var releases = data.data.releaseConfigs || [];
+      releases.forEach(function(release, index) {
+        var card = document.createElement('div');
+        card.className = 'release-card';
+        card.id = 'release-card-' + index;
+        card.dataset.compResult = release.releaseCompilationResult || '';
+        var name = extractReleaseName(release.name);
+        var gcpUrl = buildGcpConsoleUrl(release.name);
+        var vars = (release.codeCompilationConfig || {}).vars || {};
+        var hasVars = vars && Object.keys(vars).length > 0;
+        var varsHtml = '<div class="release-vars">';
+        if (hasVars) {
+          for (var k in vars) {
+            varsHtml += '<div class="release-var-item"><span class="release-var-key">' + k + '</span><span class="release-var-value">' + vars[k] + '</span></div>';
+          }
+        } else {
+          varsHtml += '<div class="release-var-item"><span class="release-var-key">No variables</span></div>';
+        }
+        varsHtml += '</div>';
+        card.innerHTML = '<div class="release-name"><a href="' + gcpUrl + '" target="_blank">' + name + '</a></div>' +
+          '<div class="release-last-compile">Loading...</div>' +
+          varsHtml +
+          '<button class="release-restore-btn" data-release="' + name + '">View History & Restore</button>';
+        card.addEventListener('click', function(e) {
+          if (e.target.closest('.release-name a')) return;
+          if (e.target.classList.contains('release-restore-btn')) { openRestoreModal(name); return; }
+          var varsEl = card.querySelector('.release-vars');
+          if (varsEl) varsEl.classList.toggle('show');
+        });
+        releasesPanel.appendChild(card);
+      });
+      fetchCompilations(releases);
+    }).catch(function(err) {
+      releasesPanel.innerHTML = '<div class="releases-loading">Error: ' + err.message + '</div>';
+    });
+  }
+
+  function fetchCompilations(releases) {
+    apiCall('listCompilations').then(function(data) {
+      var compilates = data.compilates || {};
+      var cards = releasesPanel.querySelectorAll('.release-card');
+      releases.forEach(function(release, index) {
+        if (!cards[index]) return;
+        var compResultPath = release.releaseCompilationResult;
+        if (compResultPath) {
+          var compId = compResultPath.split('/').pop();
+          var comp = compilates[compId];
+          if (comp && comp.createTime) {
+            var timeEl = cards[index].querySelector('.release-last-compile');
+            if (timeEl) timeEl.textContent = new Date(comp.createTime).toLocaleString();
+          }
+        }
+      });
+    });
+  }
+
+  function extractReleaseName(name) {
+    if (!name) return 'Unknown';
+    var parts = name.split('/');
+    return parts[parts.length - 1] || 'Unknown';
+  }
+
+  function buildGcpConsoleUrl(name) {
+    if (!name) return '#';
+    var parts = name.split('/');
+    if (parts.length < 8) return '#';
+    return 'https://console.cloud.google.com/bigquery/dataform/locations/' + parts[3] + '/repositories/' + parts[5] + '/release-configurations/' + parts[parts.length - 1] + '?project=' + parts[1];
+  }
+
+  function fetchDataformHistory() {
+    loader.innerText = 'Connecting to Google Cloud Dataform...';
+    loader.className = 'status info'; loader.classList.remove('hide');
+    invocationsBody.innerHTML = '<tr><td colspan="6" class="empty-state">Fetching data, please wait...</td></tr>';
+    apiCall('listInvocations').then(function(data) {
+      var invocations = data.data.workflowInvocations || [];
+      renderInvocations(invocations);
+      loader.innerText = 'Update completed: ' + invocations.length + ' invocations found.';
+      loader.className = 'status info';
+      setTimeout(function() { loader.classList.add('hide'); }, 5000);
+    }).catch(function(err) {
+      loader.innerText = 'Error: ' + err.message; loader.className = 'status error';
+      invocationsBody.innerHTML = '<tr><td colspan="6" class="empty-state">Unable to load data.</td></tr>';
+    });
+  }
+
+  function renderInvocations(invocations) {
+    if (!invocations || invocations.length === 0) {
+      invocationsBody.innerHTML = '<tr><td colspan="6" class="empty-state">No workflow invocations found.</td></tr>';
+      return;
+    }
+    invocationsBody.innerHTML = '';
+    invocations.forEach(function(invocation) {
+      var row = document.createElement('tr');
+      var state = invocation.state || 'UNKNOWN';
+      var startTime = invocation.invocationTiming && invocation.invocationTiming.startTime ? new Date(invocation.invocationTiming.startTime) : null;
+      var endTime = invocation.invocationTiming && invocation.invocationTiming.endTime ? new Date(invocation.invocationTiming.endTime) : null;
+      var duration = (startTime && endTime) ? formatDuration(endTime - startTime) : (startTime ? 'In Progress' : 'N/A');
+      var workflowName = extractWorkflowName(invocation.workflowConfig);
+      var gcpUrl = buildWorkflowGcpUrl(invocation.name);
+      var targets = (invocation.invocationConfig || {}).includedTargets || [];
+      var schemas = extractUniqueSchemas(targets);
+      var schemaDisplay = schemas.length <= 3 ? schemas.join(', ') : schemas.slice(0, 2).join(', ') + ' +' + (schemas.length - 2) + ' more';
+      row.innerHTML = '<td><span class="status-badge ' + getStatusClass(state) + '">' + state + '</span></td>' +
+        '<td><span class="schema-text">' + schemaDisplay + '</span></td>' +
+        '<td><a href="' + gcpUrl + '" target="_blank" class="workflow-link">' + workflowName + '</a></td>' +
+        '<td>' + targets.length + '</td>' +
+        '<td>' + (startTime ? startTime.toLocaleString() : 'N/A') + '</td>' +
+        '<td>' + duration + '</td>';
+      invocationsBody.appendChild(row);
+    });
+  }
+
+  function getStatusClass(state) {
+    if (!state) return '';
+    var s = state.toUpperCase();
+    if (s === 'SUCCEEDED') return 'status-success';
+    if (s.indexOf('FAIL') >= 0 || s.indexOf('ERROR') >= 0 || s === 'CANCELLED') return 'status-failure';
+    return 'status-pending';
+  }
+
+  function getScriptTypeClass(type) {
+    switch (type) {
+      case 'table': return 'status-success';
+      case 'assertion': return 'status-pending';
+      case 'operations': return 'status-info';
+      case 'declaration': return 'status-muted';
+      default: return '';
+    }
+  }
+
+  function formatDuration(ms) {
+    if (ms < 0) return 'N/A';
+    var seconds = Math.floor((ms / 1000) % 60);
+    var minutes = Math.floor((ms / (1000 * 60)) % 60);
+    var hours = Math.floor(ms / (1000 * 60 * 60));
+    var parts = [];
+    if (hours > 0) parts.push(hours + 'h');
+    if (minutes > 0) parts.push(minutes + 'm');
+    if (seconds > 0 || parts.length === 0) parts.push(seconds + 's');
+    return parts.join(' ');
+  }
+
+  function extractWorkflowName(workflowConfig) {
+    if (!workflowConfig) return 'Unknown';
+    var parts = workflowConfig.split('/');
+    return parts[parts.length - 1] || 'Unknown';
+  }
+
+  function extractUniqueSchemas(targets) {
+    var seen = {};
+    var schemas = [];
+    targets.forEach(function(t) {
+      if (t.schema && !seen[t.schema]) { seen[t.schema] = true; schemas.push(t.schema); }
+    });
+    return schemas.sort();
+  }
+
+  function buildWorkflowGcpUrl(name) {
+    if (!name) return '#';
+    var parts = name.split('/');
+    if (parts.length < 8) return '#';
+    return 'https://console.cloud.google.com/bigquery/dataform/locations/' + parts[3] + '/repositories/' + parts[5] + '/workflows/' + parts[7] + '?project=' + parts[1];
+  }
+
+  var restoreModal = document.getElementById('restore-modal');
+  var compilationHistory = document.getElementById('compilation-history');
+  restoreModal.querySelector('.modal-close').addEventListener('click', function() { restoreModal.classList.add('hide'); });
+  restoreModal.addEventListener('click', function(e) { if (e.target === restoreModal) restoreModal.classList.add('hide'); });
+
+  var scriptsModal = document.getElementById('scripts-modal');
+  scriptsModal.querySelector('.modal-close').addEventListener('click', function() { scriptsModal.classList.add('hide'); });
+  scriptsModal.addEventListener('click', function(e) { if (e.target === scriptsModal) scriptsModal.classList.add('hide'); });
+
+  function openRestoreModal(releaseId) {
+    document.getElementById('restore-release-name').textContent = 'Release: ' + releaseId;
+    compilationHistory.innerHTML = '<div class="releases-loading">Loading compilation history...</div>';
+    restoreModal.classList.remove('hide');
+    apiCall('listReleaseCompilations', { releaseId: releaseId }).then(function(data) {
+      var compilations = data.compilations || [];
+      if (compilations.length === 0) { compilationHistory.innerHTML = '<p>No compilation history found.</p>'; return; }
+      compilationHistory.innerHTML = compilations.map(function(comp) {
+        var time = new Date(comp.createTime).toLocaleString();
+        var vars = comp.vars || {};
+        var details = [];
+        if (comp.schemaSuffix) details.push('suffix: ' + comp.schemaSuffix);
+        for (var k in vars) details.push(k + ': ' + vars[k]);
+        return '<div class="compilation-item"><div class="compilation-info"><div class="compilation-time">' + time + '</div><div class="compilation-vars">' + (details.join(', ') || 'No vars') + '</div></div><button class="compilation-restore-btn" data-compilation="' + comp.name + '" data-release="' + releaseId + '">Restore</button></div>';
+      }).join('');
+      document.querySelectorAll('.compilation-restore-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() { restoreCompilation(btn.dataset.release, btn.dataset.compilation, btn); });
+      });
+    }).catch(function(err) { compilationHistory.innerHTML = '<p>Error: ' + err.message + '</p>'; });
+  }
+
+  function restoreCompilation(releaseId, compilationId, btn) {
+    if (!confirm('Restore release "' + releaseId + '" to compilation ' + compilationId + '?')) return;
+    btn.disabled = true; btn.textContent = 'Restoring...';
+    apiCall('restoreReleaseVars', { releaseId: releaseId, compilationId: compilationId }).then(function(data) {
+      if (data.status === 'ok') {
+        btn.textContent = 'Restored!';
+        setTimeout(function() { restoreModal.classList.add('hide'); fetchReleaseConfigs(); }, 1500);
+      } else {
+        btn.textContent = 'Error'; btn.disabled = false;
+        alert('Failed: ' + (data.error || 'Unknown error'));
+      }
+    }).catch(function(err) { btn.textContent = 'Error'; btn.disabled = false; alert('Error: ' + err.message); });
+  }
+
+  function fetchWorkflowConfigs() {
+    var panel = document.getElementById('workflow-configs-panel');
+    apiCall('listWorkflowConfigs').then(function(data) {
+      workflowConfigsData = data.workflowConfigs || [];
+      if (workflowConfigsData.length === 0) { panel.innerHTML = '<div class="releases-loading">No workflow configurations found.</div>'; return; }
+      panel.innerHTML = '';
+      workflowConfigsData.forEach(function(config) { renderWorkflowConfigCard(config, panel); });
+    }).catch(function(err) { panel.innerHTML = '<div class="releases-loading">Error: ' + err.message + '</div>'; });
+  }
+
+  function renderWorkflowConfigCard(config, panel) {
+    var card = document.createElement('div');
+    card.className = 'wf-config-card';
+    card.title = 'Click to view scripts';
+    var stateBadge = config.state === 'ACTIVE' ? '<span class="wf-config-state state-active">Active</span>' : '<span class="wf-config-state state-disabled">Disabled</span>';
+    var targets = config.includedTargets || [];
+    var targetNames = targets.map(function(t) { return t.name; }).join(', ') || 'All (no filter)';
+    var schedule = config.cronSchedule ? '<span class="wf-config-schedule">' + config.cronSchedule + '</span>' : '';
+    card.innerHTML = '<div class="wf-config-name">' + config.name + '</div>' +
+      '<div class="wf-config-meta">' + stateBadge + ' ' + schedule + '</div>' +
+      '<div class="wf-config-targets" title="' + targetNames + '">' + targetNames + '</div>';
+    card.addEventListener('click', function() { openScriptsModal(config.id); });
+    panel.appendChild(card);
+  }
+
+  function openScriptsModal(configId) {
+    var body = document.getElementById('scripts-modal-body');
+    body.innerHTML = '<div class="releases-loading">Loading scripts...</div>';
+    scriptsModal.classList.remove('hide');
+    apiCall('getWorkflowScripts', { configId: configId }).then(function(data) {
+      if (data.error) { body.innerHTML = '<p class="empty-state">Error: ' + data.error + '</p>'; return; }
+      var html = '<div class="scripts-header"><div class="scripts-title">' + data.configName + '</div>' +
+        '<div class="scripts-meta"><span>State: <strong>' + data.state + '</strong></span><span>Scripts: <strong>' + data.totalScripts + '</strong></span><span>Compilation: <code>' + data.compilationId + '</code></span></div>';
+      if (data.cronSchedule) html += '<div class="scripts-meta"><span>Schedule: <strong>' + data.cronSchedule + '</strong></span></div>';
+      if (data.transitiveDependenciesIncluded) html += '<div class="scripts-notice">Transitive dependencies are included</div>';
+      if (data.transitiveDependentsIncluded) html += '<div class="scripts-notice">Transitive dependents are included</div>';
+      html += '</div>';
+      if (data.includedTargets && data.includedTargets.length > 0) {
+        html += '<div class="scripts-targets"><strong>Included Targets:</strong> ';
+        html += data.includedTargets.map(function(t) { return '<span class="target-badge">' + (t.database || '') + '.' + (t.schema || '') + '.' + (t.name || '') + '</span>'; }).join(' ');
+        html += '</div>';
+      }
+      if (data.scripts && data.scripts.length > 0) {
+        html += '<div class="scripts-list">';
+        data.scripts.forEach(function(script) {
+          var targetStr = script.target ? ((script.target.database || '') + '.' + (script.target.schema || '') + '.' + (script.target.name || '')) : 'Unknown';
+          html += '<div class="script-item"><div class="script-item-header"><span class="script-target">' + targetStr + '</span><span class="status-badge ' + getScriptTypeClass(script.type) + '">' + script.type + '</span><span class="script-filepath">' + script.filePath + '</span></div>';
+          html += script.selectQuery ? '<pre class="script-sql"><code>' + escapeHtml(script.selectQuery) + '</code></pre>' : '<div class="script-no-sql">No SQL (declaration)</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<p class="empty-state">No scripts found for this workflow config.</p>';
+      }
+      body.innerHTML = html;
+    }).catch(function(err) { body.innerHTML = '<p class="empty-state">Error: ' + err.message + '</p>'; });
+  }
+
+  function handleScriptSearch(query) {
+    var panel = document.getElementById('workflow-configs-panel');
+    var results = document.getElementById('search-results');
+    if (!query) { results.classList.add('hide'); panel.classList.remove('hide'); return; }
+    var matches = [];
+    workflowConfigsData.forEach(function(config) {
+      var targets = config.includedTargets || [];
+      var matching = targets.filter(function(t) { return t.name.toLowerCase().indexOf(query) >= 0; });
+      if (matching.length > 0) matches.push({ config: config, matching: matching });
+    });
+    panel.classList.add('hide'); results.classList.remove('hide');
+    if (matches.length === 0) {
+      results.innerHTML = '<div class="search-no-results">No workflow configurations include a target matching "<strong>' + escapeHtml(query) + '</strong>"</div>';
+      return;
+    }
+    var html = '<div class="search-results-count">' + matches.length + ' workflow configuration' + (matches.length > 1 ? 's' : '') + ' include targets matching "<strong>' + escapeHtml(query) + '</strong>"</div>';
+    html += '<div class="search-results-list">';
+    matches.forEach(function(m) {
+      html += '<div class="search-result-item" data-config="' + m.config.id + '"><div class="search-result-header"><span class="search-result-name">' + escapeHtml(m.config.name) + '</span><span class="search-result-count">' + m.matching.length + ' target' + (m.matching.length > 1 ? 's' : '') + '</span></div><div class="search-result-targets">';
+      html += m.matching.map(function(t) { return '<span class="target-badge">' + [t.database, t.schema, t.name].filter(Boolean).join('.') + '</span>'; }).join('');
+      html += '</div></div>';
+    });
+    html += '</div>';
+    results.innerHTML = html;
+    results.querySelectorAll('.search-result-item').forEach(function(item) {
+      item.addEventListener('click', function() { openScriptsModal(item.dataset.config); });
+    });
+  }
+});
+
+  </script>
+</body>
+</html>
